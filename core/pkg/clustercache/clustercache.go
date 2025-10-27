@@ -160,6 +160,13 @@ type ReplicaSet struct {
 	Spec            appsv1.ReplicaSetSpec
 }
 
+type ResourceQuota struct {
+	Name      string
+	Namespace string
+	Spec      v1.ResourceQuotaSpec
+	Status    v1.ResourceQuotaStatus
+}
+
 type Volume struct {
 }
 
@@ -381,6 +388,15 @@ func TransformReplicaSet(input *appsv1.ReplicaSet) *ReplicaSet {
 	}
 }
 
+func TransformResourceQuota(input *v1.ResourceQuota) *ResourceQuota {
+	return &ResourceQuota{
+		Name:      input.Name,
+		Namespace: input.Namespace,
+		Spec:      input.Spec,
+		Status:    input.Status,
+	}
+}
+
 // ClusterCache defines an contract for an object which caches components within a cluster, ensuring
 // up to date resources using watchers
 type ClusterCache interface {
@@ -431,4 +447,7 @@ type ClusterCache interface {
 
 	// GetAllReplicationControllers returns all cached replication controllers
 	GetAllReplicationControllers() []*ReplicationController
+
+	// GetAllResourceQuotas returns all cached resource quotas
+	GetAllResourceQuotas() []*ResourceQuota
 }
