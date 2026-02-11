@@ -8,7 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import Typography from "@mui/material/Typography";
 import { sortBy } from "lodash";
@@ -78,28 +77,8 @@ const EfficiencyChart = ({ data, n = 15, height = 400 }) => {
           <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey="cpuEfficiency" name="CPU Efficiency" fill="#1976d2" barSize={12}>
-            {chartData.map((entry, i) => (
-              <Cell
-                key={i}
-                fill={entry.cpuEfficiency >= 0.8 ? "#4caf50" : entry.cpuEfficiency >= 0.5 ? "#ff9800" : "#f44336"}
-              />
-            ))}
-          </Bar>
-          <Bar dataKey="memoryEfficiency" name="Memory Efficiency" fill="#9c27b0" barSize={12}>
-            {chartData.map((entry, i) => (
-              <Cell
-                key={i}
-                fill={
-                  entry.memoryEfficiency >= 0.8
-                    ? "#4caf50"
-                    : entry.memoryEfficiency >= 0.5
-                      ? "#ff9800"
-                      : "#f44336"
-                }
-              />
-            ))}
-          </Bar>
+          <Bar dataKey="cpuEfficiency" name="CPU Efficiency" fill="#1976d2" barSize={12} />
+          <Bar dataKey="memoryEfficiency" name="Memory Efficiency" fill="#9c27b0" barSize={12} />
         </BarChart>
       </ResponsiveContainer>
     </div>
