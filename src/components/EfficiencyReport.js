@@ -8,8 +8,19 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import WarningIcon from "@mui/icons-material/Warning";
 import EfficiencyChart from "./EfficiencyChart";
+
+const hasNoRequests = (row) =>
+  row.cpuCoresRequested === 0 && row.ramBytesRequested === 0;
+
+const NoRequestsWarning = () => (
+  <Tooltip title="No resource requests set" arrow>
+    <WarningIcon style={{ color: "#ff9800", fontSize: 18, verticalAlign: "middle", marginRight: 4 }} />
+  </Tooltip>
+);
 
 function descendingComparator(a, b, orderBy) {
   if (get(b, orderBy) < get(a, orderBy)) return -1;
@@ -116,7 +127,10 @@ const EfficiencyReport = ({ data }) => {
           <TableBody>
             {pageData.map((row) => (
               <TableRow key={row.name} hover>
-                <TableCell>{row.name}</TableCell>
+                <TableCell>
+                  {hasNoRequests(row) && <NoRequestsWarning />}
+                  {row.name}
+                </TableCell>
                 <TableCell align="right" style={{ color: effColor(row.memoryEfficiency) }}>
                   {formatPercent(row.memoryEfficiency)}
                 </TableCell>
