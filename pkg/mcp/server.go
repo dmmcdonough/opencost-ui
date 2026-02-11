@@ -32,13 +32,6 @@ const (
 	EfficiencyQueryType QueryType = "efficiency"
 )
 
-// Efficiency calculation constants
-const (
-	efficiencyBufferMultiplier = 1.2         // 20% headroom for stability
-	efficiencyMinCPU           = 0.001       // minimum CPU cores
-	efficiencyMinRAM           = 1024 * 1024 // 1 MB minimum RAM
-)
-
 // MCPRequest represents a single turn in a conversation with the OpenCost MCP server.
 type MCPRequest struct {
 	SessionID string                `json:"sessionId"`
@@ -318,47 +311,6 @@ type CloudCost struct {
 type CostMetric struct {
 	Cost              float64 `json:"cost"`
 	KubernetesPercent float64 `json:"kubernetesPercent"`
-}
-
-// EfficiencyResponse represents the efficiency data returned to the AI agent.
-type EfficiencyResponse struct {
-	Efficiencies []*EfficiencyMetric `json:"efficiencies"`
-}
-
-// EfficiencyMetric represents efficiency data for a single pod/workload.
-type EfficiencyMetric struct {
-	Name string `json:"name"` // Pod/namespace/controller name based on aggregation
-
-	// Current state
-	CPUEfficiency    float64 `json:"cpuEfficiency"`    // Usage / Request ratio (0-1+)
-	MemoryEfficiency float64 `json:"memoryEfficiency"` // Usage / Request ratio (0-1+)
-
-	// Current requests and usage
-	CPUCoresRequested float64 `json:"cpuCoresRequested"`
-	CPUCoresUsed      float64 `json:"cpuCoresUsed"`
-	RAMBytesRequested float64 `json:"ramBytesRequested"`
-	RAMBytesUsed      float64 `json:"ramBytesUsed"`
-
-	// Recommendations (based on actual usage with buffer)
-	RecommendedCPURequest float64 `json:"recommendedCpuRequest"` // Recommended CPU cores
-	RecommendedRAMRequest float64 `json:"recommendedRamRequest"` // Recommended RAM bytes
-
-	// Resulting efficiency after applying recommendations
-	ResultingCPUEfficiency    float64 `json:"resultingCpuEfficiency"`
-	ResultingMemoryEfficiency float64 `json:"resultingMemoryEfficiency"`
-
-	// Cost analysis
-	CurrentTotalCost   float64 `json:"currentTotalCost"`   // Current total cost
-	RecommendedCost    float64 `json:"recommendedCost"`    // Estimated cost with recommendations
-	CostSavings        float64 `json:"costSavings"`        // Potential savings
-	CostSavingsPercent float64 `json:"costSavingsPercent"` // Savings as percentage
-
-	// Buffer multiplier used for recommendations
-	EfficiencyBufferMultiplier float64 `json:"efficiencyBufferMultiplier"` // Buffer multiplier applied (e.g., 1.2 for 20% headroom)
-
-	// Time window
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
 }
 
 // MCPServer holds the dependencies for the MCP API server.
@@ -1017,7 +969,7 @@ func transformCloudCostSetRange(ccsr *opencost.CloudCostSetRange) *CloudCostResp
 }
 
 // QueryEfficiency queries allocation data and computes efficiency metrics with recommendations.
-func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyResponse, error) {
+func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*costmodel.EfficiencyResponse, error) {
 	// 1. Parse Window
 	window, err := opencost.ParseWindowWithOffset(query.Window, 0)
 	if err != nil {
@@ -1027,7 +979,7 @@ func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyRes
 	// 2. Set default parameters
 	var aggregateBy []string
 	var filterString string
-	var bufferMultiplier float64 = efficiencyBufferMultiplier // Default to 1.2 (20% headroom)
+	var bufferMultiplier float64 = costmodel.EfficiencyBufferMultiplier // Default to 1.2 (20% headroom)
 
 	// 3. Parse efficiency parameters if provided
 	if query.EfficiencyParams != nil {
@@ -1082,8 +1034,8 @@ func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyRes
 
 	// 5. Handle empty results
 	if asr == nil || len(asr.Allocations) == 0 {
-		return &EfficiencyResponse{
-			Efficiencies: []*EfficiencyMetric{},
+		return &costmodel.EfficiencyResponse{
+			Efficiencies: []*costmodel.EfficiencyMetric{},
 		}, nil
 	}
 
@@ -1091,7 +1043,7 @@ func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyRes
 	var (
 		mu           sync.Mutex
 		wg           sync.WaitGroup
-		efficiencies = make([]*EfficiencyMetric, 0)
+		efficiencies = make([]*costmodel.EfficiencyMetric, 0)
 	)
 
 	// Process each allocation set (typically one per time window) concurrently
@@ -1106,9 +1058,9 @@ func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyRes
 			defer wg.Done()
 
 			// Compute metrics for all allocations in this set
-			localMetrics := make([]*EfficiencyMetric, 0, len(allocSet.Allocations))
+			localMetrics := make([]*costmodel.EfficiencyMetric, 0, len(allocSet.Allocations))
 			for _, alloc := range allocSet.Allocations {
-				if metric := computeEfficiencyMetric(alloc, bufferMultiplier); metric != nil {
+				if metric := costmodel.ComputeEfficiencyMetric(alloc, bufferMultiplier); metric != nil {
 					localMetrics = append(localMetrics, metric)
 				}
 			}
@@ -1125,101 +1077,7 @@ func (s *MCPServer) QueryEfficiency(query *OpenCostQueryRequest) (*EfficiencyRes
 	// Wait for all goroutines to complete
 	wg.Wait()
 
-	return &EfficiencyResponse{
+	return &costmodel.EfficiencyResponse{
 		Efficiencies: efficiencies,
 	}, nil
-}
-
-// safeDiv performs division and returns 0 if denominator is 0.
-func safeDiv(numerator, denominator float64) float64 {
-	if denominator == 0 {
-		return 0
-	}
-	return numerator / denominator
-}
-
-// computeEfficiencyMetric calculates efficiency metrics for a single allocation.
-func computeEfficiencyMetric(alloc *opencost.Allocation, bufferMultiplier float64) *EfficiencyMetric {
-	if alloc == nil {
-		return nil
-	}
-
-	// Calculate time duration in hours
-	hours := alloc.Minutes() / 60.0
-	if hours <= 0 {
-		return nil
-	}
-
-	// Get current usage (average over the period)
-	cpuCoresUsed := alloc.CPUCoreHours / hours
-	ramBytesUsed := alloc.RAMByteHours / hours
-
-	// Get requested amounts
-	cpuCoresRequested := alloc.CPUCoreRequestAverage
-	ramBytesRequested := alloc.RAMBytesRequestAverage
-
-	// Calculate current efficiency (will be 0 if no requests are set)
-	cpuEfficiency := safeDiv(cpuCoresUsed, cpuCoresRequested)
-	memoryEfficiency := safeDiv(ramBytesUsed, ramBytesRequested)
-
-	// Calculate recommendations with buffer for headroom
-	recommendedCPU := cpuCoresUsed * bufferMultiplier
-	recommendedRAM := ramBytesUsed * bufferMultiplier
-
-	// Ensure recommendations meet minimum thresholds
-	if recommendedCPU < efficiencyMinCPU {
-		recommendedCPU = efficiencyMinCPU
-	}
-	if recommendedRAM < efficiencyMinRAM {
-		recommendedRAM = efficiencyMinRAM
-	}
-
-	// Calculate resulting efficiency after applying recommendations
-	resultingCPUEff := safeDiv(cpuCoresUsed, recommendedCPU)
-	resultingMemEff := safeDiv(ramBytesUsed, recommendedRAM)
-
-	// Calculate cost per unit based on REQUESTED amounts (not used amounts)
-	// This gives us the cost per core-hour or byte-hour that the cluster charges
-	cpuCostPerCoreHour := safeDiv(alloc.CPUCost, cpuCoresRequested*hours)
-	ramCostPerByteHour := safeDiv(alloc.RAMCost, ramBytesRequested*hours)
-
-	// Current total cost
-	currentTotalCost := alloc.TotalCost()
-
-	// Estimate recommended cost based on recommended requests
-	recommendedCPUCost := recommendedCPU * hours * cpuCostPerCoreHour
-	recommendedRAMCost := recommendedRAM * hours * ramCostPerByteHour
-	// Keep other costs the same (PV, network, shared, external, GPU)
-	otherCosts := alloc.PVCost() + alloc.NetworkCost + alloc.SharedCost + alloc.ExternalCost + alloc.GPUCost
-	recommendedTotalCost := recommendedCPUCost + recommendedRAMCost + otherCosts
-
-	// Clamp recommended cost to avoid rounding issues making it higher than current
-	if recommendedTotalCost > currentTotalCost && (recommendedTotalCost-currentTotalCost) < 0.0001 {
-		recommendedTotalCost = currentTotalCost
-	}
-
-	// Calculate savings
-	costSavings := currentTotalCost - recommendedTotalCost
-	costSavingsPercent := safeDiv(costSavings, currentTotalCost) * 100
-
-	return &EfficiencyMetric{
-		Name:                       alloc.Name,
-		CPUEfficiency:              cpuEfficiency,
-		MemoryEfficiency:           memoryEfficiency,
-		CPUCoresRequested:          cpuCoresRequested,
-		CPUCoresUsed:               cpuCoresUsed,
-		RAMBytesRequested:          ramBytesRequested,
-		RAMBytesUsed:               ramBytesUsed,
-		RecommendedCPURequest:      recommendedCPU,
-		RecommendedRAMRequest:      recommendedRAM,
-		ResultingCPUEfficiency:     resultingCPUEff,
-		ResultingMemoryEfficiency:  resultingMemEff,
-		CurrentTotalCost:           currentTotalCost,
-		RecommendedCost:            recommendedTotalCost,
-		CostSavings:                costSavings,
-		CostSavingsPercent:         costSavingsPercent,
-		EfficiencyBufferMultiplier: bufferMultiplier,
-		Start:                      alloc.Start,
-		End:                        alloc.End,
-	}
 }

@@ -53,6 +53,7 @@ func Execute(conf *Config) error {
 		// Register OpenCost Specific Endpoints
 		router.GET("/allocation", a.ComputeAllocationHandler)
 		router.GET("/allocation/summary", a.ComputeAllocationHandlerSummary)
+		router.GET("/allocation/efficiency", a.ComputeEfficiencyHandler)
 		router.GET("/assets", a.ComputeAssetsHandler)
 		if conf.CarbonEstimatesEnabled {
 			router.GET("/assets/carbon", a.ComputeAssetsCarbonHandler)
