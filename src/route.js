@@ -5,6 +5,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import Allocations from "./pages/Allocations.js";
 import CloudCosts from "./pages/CloudCosts.js";
+import Efficiency from "./pages/Efficiency.js";
 import ExternalCosts from "./pages/ExternalCosts.js";
 
 const basename = (process.env.UI_PATH || "").replace(/\/+$/, "");
@@ -16,6 +17,7 @@ const RouteSet = () => {
         <Routes>
           <Route exact path="/" element={<Allocations />} />
           <Route exact path="/allocation" element={<Allocations />} />
+          <Route exact path="/efficiency" element={<Efficiency />} />
           <Route exact path="/cloud" element={<CloudCosts />} />
           <Route exact path="/external-costs" element={<ExternalCosts />} />
         </Routes>
