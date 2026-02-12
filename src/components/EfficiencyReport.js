@@ -11,6 +11,7 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import WarningIcon from "@mui/icons-material/Warning";
+import Alert from "@mui/material/Alert";
 import EfficiencyChart from "./EfficiencyChart";
 
 const hasNoRequests = (row) =>
@@ -99,9 +100,35 @@ const EfficiencyReport = ({ data }) => {
   const sorted = stableSort(data, getComparator(order, orderBy));
   const pageData = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+  const quickWins = [...data]
+    .filter((item) => item.costSavings > 0)
+    .sort((a, b) => b.costSavings - a.costSavings)
+    .slice(0, 5);
+
   return (
     <div>
       <EfficiencyChart data={data} />
+
+      {quickWins.length > 0 && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <Typography variant="subtitle2" style={{ marginBottom: 8, fontWeight: 600 }}>
+            Quick Wins
+          </Typography>
+          {quickWins.map((item) => (
+            <Alert
+              key={item.name}
+              severity="info"
+              style={{ marginBottom: 8 }}
+            >
+              <strong>{item.name}</strong> requests{" "}
+              {item.cpuCoresRequested?.toFixed(2) ?? "?"} CPU cores but uses{" "}
+              {item.cpuCoresUsed?.toFixed(2) ?? "?"} &mdash; rightsizing saves{" "}
+              {formatCurrency(item.costSavings)}/period
+            </Alert>
+          ))}
+        </div>
+      )}
+
       <TableContainer>
         <Table size="small">
           <TableHead>

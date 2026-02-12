@@ -27,6 +27,89 @@ const windowOptions = [
   { name: "Last 14 days", value: "14d" },
 ];
 
+const summaryCardStyle = {
+  flex: "1 1 0",
+  padding: 24,
+  minWidth: 200,
+};
+
+const summaryLabelStyle = {
+  fontSize: 13,
+  color: "#666",
+  fontWeight: 500,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+  marginBottom: 8,
+};
+
+const summaryValueStyle = {
+  fontSize: 28,
+  fontWeight: 600,
+  lineHeight: 1.2,
+};
+
+const summaryEffColor = (v) => {
+  if (v >= 0.8) return "#4caf50";
+  if (v >= 0.5) return "#ff9800";
+  return "#f44336";
+};
+
+const EfficiencySummaryCards = ({ data }) => {
+  let totalSavings = 0;
+  let totalCpuCost = 0;
+  let totalRamCost = 0;
+  let weightedCpuEff = 0;
+  let weightedRamEff = 0;
+  let belowTarget = 0;
+
+  data.forEach((item) => {
+    totalSavings += item.costSavings || 0;
+    const cpuCost = item.cpuCost || 0;
+    const ramCost = item.ramCost || 0;
+    totalCpuCost += cpuCost;
+    totalRamCost += ramCost;
+    weightedCpuEff += cpuCost * (item.cpuEfficiency || 0);
+    weightedRamEff += ramCost * (item.memoryEfficiency || 0);
+
+    const computeCost = cpuCost + ramCost;
+    const eff =
+      computeCost > 0
+        ? (cpuCost * (item.cpuEfficiency || 0) + ramCost * (item.memoryEfficiency || 0)) /
+          computeCost
+        : 0;
+    if (eff < 0.5) belowTarget++;
+  });
+
+  const totalComputeCost = totalCpuCost + totalRamCost;
+  const clusterEff =
+    totalComputeCost > 0
+      ? (weightedCpuEff + weightedRamEff) / totalComputeCost
+      : 0;
+
+  return (
+    <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+      <Paper style={summaryCardStyle}>
+        <div style={summaryLabelStyle}>Total Potential Savings</div>
+        <div style={{ ...summaryValueStyle, color: totalSavings > 0 ? "#4caf50" : undefined }}>
+          ${totalSavings.toFixed(2)}
+        </div>
+      </Paper>
+      <Paper style={summaryCardStyle}>
+        <div style={summaryLabelStyle}>Cluster Efficiency</div>
+        <div style={{ ...summaryValueStyle, color: summaryEffColor(clusterEff) }}>
+          {(clusterEff * 100).toFixed(1)}%
+        </div>
+      </Paper>
+      <Paper style={summaryCardStyle}>
+        <div style={summaryLabelStyle}>Below 50% Efficiency</div>
+        <div style={{ ...summaryValueStyle, color: belowTarget > 0 ? "#f44336" : "#4caf50" }}>
+          {belowTarget} {belowTarget === 1 ? "item" : "items"}
+        </div>
+      </Paper>
+    </div>
+  );
+};
+
 const aggregationOptions = [
   { name: "Namespace", value: "namespace" },
   { name: "Controller", value: "controller" },
@@ -93,6 +176,10 @@ const EfficiencyPage = () => {
         <div style={{ marginBottom: 20 }}>
           <Warnings warnings={errors} />
         </div>
+      )}
+
+      {!loading && efficiencyData.length > 0 && (
+        <EfficiencySummaryCards data={efficiencyData} />
       )}
 
       <Paper id="efficiency">

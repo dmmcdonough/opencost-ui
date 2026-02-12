@@ -5,8 +5,11 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import Allocations from "./pages/Allocations.js";
 import CloudCosts from "./pages/CloudCosts.js";
+import Comparison from "./pages/Comparison.js";
 import Efficiency from "./pages/Efficiency.js";
 import ExternalCosts from "./pages/ExternalCosts.js";
+import Overview from "./pages/Overview.js";
+import Teams from "./pages/Teams.js";
 
 const basename = (process.env.UI_PATH || "").replace(/\/+$/, "");
 
@@ -15,9 +18,12 @@ const RouteSet = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <BrowserRouter basename={basename}>
         <Routes>
-          <Route exact path="/" element={<Allocations />} />
+          <Route exact path="/" element={<Overview />} />
+          <Route exact path="/overview" element={<Overview />} />
           <Route exact path="/allocation" element={<Allocations />} />
+          <Route exact path="/teams" element={<Teams />} />
           <Route exact path="/efficiency" element={<Efficiency />} />
+          <Route exact path="/comparison" element={<Comparison />} />
           <Route exact path="/cloud" element={<CloudCosts />} />
           <Route exact path="/external-costs" element={<ExternalCosts />} />
         </Routes>

@@ -2,7 +2,14 @@ import * as React from "react";
 import { Drawer, List } from "@mui/material";
 
 import { NavItem } from "./NavItem";
-import { BarChart, Cloud, Speed } from "@mui/icons-material";
+import {
+  BarChart,
+  Cloud,
+  CompareArrows,
+  Dashboard,
+  Group,
+  Speed,
+} from "@mui/icons-material";
 
 const logo = new URL("../../images/logo.png", import.meta.url).href;
 
@@ -19,14 +26,32 @@ const SidebarNav = ({ active }) => {
 
   const top = [
     {
+      name: "Overview",
+      href: "/overview",
+      icon: <Dashboard />,
+    },
+    {
       name: "Cost Allocation",
       href: "/allocation",
       icon: <BarChart />,
     },
+    {
+      name: "Teams",
+      href: "/teams",
+      icon: <Group />,
+    },
     { name: "Efficiency", href: "/efficiency", icon: <Speed /> },
+    {
+      name: "Compare",
+      href: "/comparison",
+      icon: <CompareArrows />,
+    },
     { name: "Cloud Costs", href: "/cloud", icon: <Cloud /> },
     { name: "External Costs", href: "/external-costs", icon: <Cloud /> },
   ];
+
+  // Handle root path matching to Overview
+  const activePath = active === "/" ? "/overview" : active;
 
   return (
     <Drawer
@@ -51,7 +76,7 @@ const SidebarNav = ({ active }) => {
       />
       <List style={{ flexGrow: 1 }}>
         {top.map((l) => (
-          <NavItem active={active === `${l.href}`} key={l.name} {...l} />
+          <NavItem active={activePath === `${l.href}`} key={l.name} {...l} />
         ))}
       </List>
     </Drawer>
