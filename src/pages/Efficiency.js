@@ -1,7 +1,9 @@
 import CircularProgress from "@mui/material/CircularProgress";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -54,7 +56,13 @@ const summaryEffColor = (v) => {
   return "#f44336";
 };
 
-const EfficiencySummaryCards = ({ data }) => {
+const scaleDownCardStyle = (likely) => ({
+  ...summaryCardStyle,
+  backgroundColor: likely ? "#e8f5e9" : "#f5f5f5",
+  border: likely ? "1px solid #a5d6a7" : "1px solid #e0e0e0",
+});
+
+const EfficiencySummaryCards = ({ data, clusterSavingsSummary }) => {
   let totalSavings = 0;
   let totalCpuCost = 0;
   let totalRamCost = 0;
@@ -106,6 +114,29 @@ const EfficiencySummaryCards = ({ data }) => {
           {belowTarget} {belowTarget === 1 ? "item" : "items"}
         </div>
       </Paper>
+      {clusterSavingsSummary && (
+        <Paper style={scaleDownCardStyle(clusterSavingsSummary.scaleDownLikely)}>
+          <div style={summaryLabelStyle}>Cluster Scale-Down</div>
+          {clusterSavingsSummary.scaleDownLikely ? (
+            <>
+              <div style={{ ...summaryValueStyle, color: "#2e7d32", fontSize: 20 }}>
+                {clusterSavingsSummary.nodeSavingsEstimateMsg || "Scale-down possible"}
+              </div>
+              <div style={{ fontSize: 13, color: "#555", marginTop: 6 }}>
+                ~{clusterSavingsSummary.estimatedNodesFreed || 0} node
+                {clusterSavingsSummary.estimatedNodesFreed === 1 ? "" : "s"} could be freed
+                {clusterSavingsSummary.bottleneckResource && (
+                  <span> (bottleneck: {clusterSavingsSummary.bottleneckResource})</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
+              Freed resources don't fill a full node
+            </div>
+          )}
+        </Paper>
+      )}
     </div>
   );
 };
@@ -122,6 +153,7 @@ const aggregationOptions = [
 
 const EfficiencyPage = () => {
   const [efficiencyData, setEfficiencyData] = useState([]);
+  const [clusterSavingsSummary, setClusterSavingsSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
 
@@ -131,22 +163,29 @@ const EfficiencyPage = () => {
 
   const win = searchParams.get("window") || "7d";
   const aggregateBy = searchParams.get("agg") || "namespace";
+  const showSmall = searchParams.get("showSmall") === "true";
 
   useEffect(() => {
     fetchData();
-  }, [win, aggregateBy]);
+  }, [win, aggregateBy, showSmall]);
 
   async function fetchData() {
     setLoading(true);
     setErrors([]);
 
     try {
-      const resp = await EfficiencyService.fetchEfficiency(win, aggregateBy);
+      const opts = {};
+      if (showSmall) {
+        opts.minSavings = 0;
+        opts.minSavingsPercent = 0;
+      }
+      const resp = await EfficiencyService.fetchEfficiency(win, aggregateBy, opts);
       if (resp.data && resp.data.efficiencies) {
         setEfficiencyData(resp.data.efficiencies);
       } else {
         setEfficiencyData([]);
       }
+      setClusterSavingsSummary(resp.data?.clusterSavingsSummary || null);
     } catch (err) {
       let secondary = "Please open an Issue on GitHub if problems persist.";
       if (err.message && err.message.length > 0) {
@@ -159,6 +198,7 @@ const EfficiencyPage = () => {
         },
       ]);
       setEfficiencyData([]);
+      setClusterSavingsSummary(null);
     }
 
     setLoading(false);
@@ -179,7 +219,7 @@ const EfficiencyPage = () => {
       )}
 
       {!loading && efficiencyData.length > 0 && (
-        <EfficiencySummaryCards data={efficiencyData} />
+        <EfficiencySummaryCards data={efficiencyData} clusterSavingsSummary={clusterSavingsSummary} />
       )}
 
       <Paper id="efficiency">
@@ -214,6 +254,25 @@ const EfficiencyPage = () => {
               </MenuItem>
             ))}
           </TextField>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showSmall}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    searchParams.set("showSmall", "true");
+                  } else {
+                    searchParams.delete("showSmall");
+                  }
+                  navigate({ search: `?${searchParams.toString()}` });
+                }}
+                size="small"
+              />
+            }
+            label="Show small savings"
+            style={{ marginLeft: 8 }}
+          />
         </div>
 
         {loading && (

@@ -31,6 +31,7 @@ const OverviewPage = () => {
   const [totalData, setTotalData] = useState({});
   const [priorTotalData, setPriorTotalData] = useState({});
   const [efficiencyData, setEfficiencyData] = useState([]);
+  const [clusterSavingsSummary, setClusterSavingsSummary] = useState(null);
 
   const navigate = useNavigate();
 
@@ -80,6 +81,7 @@ const OverviewPage = () => {
       } else {
         setEfficiencyData([]);
       }
+      setClusterSavingsSummary(effResp?.data?.clusterSavingsSummary || null);
     } catch (err) {
       let secondary = "Please open an Issue on GitHub if problems persist.";
       if (err.message && err.message.length > 0) {
@@ -158,6 +160,7 @@ const OverviewPage = () => {
             priorSpend={priorSpend}
             efficiency={clusterEfficiency}
             savings={totalSavings}
+            clusterSavingsSummary={clusterSavingsSummary}
           />
           <TopCostDrivers
             currentData={currentCumulative}

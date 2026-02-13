@@ -67,7 +67,7 @@ const effColor = (v) => {
   return "#f44336";
 };
 
-const SummaryCards = ({ totalSpend, priorSpend, efficiency, savings }) => {
+const SummaryCards = ({ totalSpend, priorSpend, efficiency, savings, clusterSavingsSummary }) => {
   return (
     <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
       <Paper style={cardStyle}>
@@ -94,6 +94,12 @@ const SummaryCards = ({ totalSpend, priorSpend, efficiency, savings }) => {
         <div style={{ ...deltaStyle, color: "#666" }}>
           Per week from rightsizing
         </div>
+        {clusterSavingsSummary?.scaleDownLikely && clusterSavingsSummary.estimatedNodesFreed > 0 && (
+          <div style={{ ...deltaStyle, color: "#2e7d32", fontWeight: 500 }}>
+            ~{clusterSavingsSummary.estimatedNodesFreed} node
+            {clusterSavingsSummary.estimatedNodesFreed === 1 ? "" : "s"} could be freed
+          </div>
+        )}
       </Paper>
     </div>
   );
