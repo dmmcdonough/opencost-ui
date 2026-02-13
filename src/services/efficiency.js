@@ -2,7 +2,7 @@ import client from "./api_client";
 
 class EfficiencyService {
   async fetchEfficiency(win, aggregate, options = {}) {
-    const { buffer, filter, minSavings, minSavingsPercent } = options;
+    const { buffer, filter, minSavings, minSavingsPercent, excludeSystem } = options;
     const params = {
       window: win,
       aggregate: aggregate,
@@ -18,6 +18,9 @@ class EfficiencyService {
     }
     if (minSavingsPercent !== undefined) {
       params.minSavingsPercent = minSavingsPercent;
+    }
+    if (excludeSystem !== undefined) {
+      params.excludeSystem = excludeSystem;
     }
 
     const result = await client.get("/allocation/efficiency", { params });

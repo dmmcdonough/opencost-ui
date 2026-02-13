@@ -164,10 +164,11 @@ const EfficiencyPage = () => {
   const win = searchParams.get("window") || "7d";
   const aggregateBy = searchParams.get("agg") || "namespace";
   const showSmall = searchParams.get("showSmall") === "true";
+  const showSystem = searchParams.get("showSystem") === "true";
 
   useEffect(() => {
     fetchData();
-  }, [win, aggregateBy, showSmall]);
+  }, [win, aggregateBy, showSmall, showSystem]);
 
   async function fetchData() {
     setLoading(true);
@@ -178,6 +179,9 @@ const EfficiencyPage = () => {
       if (showSmall) {
         opts.minSavings = 0;
         opts.minSavingsPercent = 0;
+      }
+      if (showSystem) {
+        opts.excludeSystem = false;
       }
       const resp = await EfficiencyService.fetchEfficiency(win, aggregateBy, opts);
       if (resp.data && resp.data.efficiencies) {
@@ -271,6 +275,25 @@ const EfficiencyPage = () => {
               />
             }
             label="Show small savings"
+            style={{ marginLeft: 8 }}
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showSystem}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    searchParams.set("showSystem", "true");
+                  } else {
+                    searchParams.delete("showSystem");
+                  }
+                  navigate({ search: `?${searchParams.toString()}` });
+                }}
+                size="small"
+              />
+            }
+            label="Include system namespaces"
             style={{ marginLeft: 8 }}
           />
         </div>
