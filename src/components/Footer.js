@@ -24,7 +24,7 @@ const Footer = () => {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
       <div style={{ fontSize: 12, color: "#999", padding: "8px 0" }}>
-        {serverVersion && <span>OpenCost {serverVersion}</span>}
+        {serverVersion && <span>opencost server: {serverVersion}</span>}
       </div>
       <div>{parsedContent}</div>
     </div>

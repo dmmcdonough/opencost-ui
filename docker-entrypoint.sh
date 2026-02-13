@@ -17,7 +17,7 @@ fi
 if [[ ! -z "$OPENCOST_FOOTER_CONTENT" ]]; then
     sed -i "s^PLACEHOLDER_FOOTER_CONTENT^$OPENCOST_FOOTER_CONTENT^g" /var/www/*.js
 else
-    sed -i "s^PLACEHOLDER_FOOTER_CONTENT^OpenCost version: $VERSION ($HEAD)^g" /var/www/*.js
+    sed -i "s^PLACEHOLDER_FOOTER_CONTENT^opencost-ui: $VERSION ($HEAD)^g" /var/www/*.js
 fi
 
 if [[ ! -e /etc/nginx/conf.d/default.nginx.conf ]];then
