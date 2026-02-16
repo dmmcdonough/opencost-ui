@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router";
 
 import EfficiencyReport from "../components/EfficiencyReport";
 import Header from "../components/Header";
+import NoDataMessage from "../components/NoDataMessage";
 import Page from "../components/Page";
 import Footer from "../components/Footer";
 import SelectWindow from "../components/SelectWindow";
@@ -191,14 +192,18 @@ const EfficiencyPage = () => {
       }
       setClusterSavingsSummary(resp.data?.clusterSavingsSummary || null);
     } catch (err) {
-      let secondary = "Please open an Issue on GitHub if problems persist.";
-      if (err.message && err.message.length > 0) {
-        secondary = err.message;
-      }
+      const msg = err?.response?.data?.message || err.message || "";
+      const isDataErr =
+        /no data|no allocation|boundary|window/i.test(msg) ||
+        err?.response?.status === 404;
       setErrors([
         {
-          primary: "Failed to load efficiency data",
-          secondary,
+          primary: isDataErr
+            ? "No efficiency data available for this window"
+            : "Failed to load efficiency data",
+          secondary: isDataErr
+            ? "Your cluster may not have enough historical data for this time range. Try a shorter window."
+            : msg || "Please open an Issue on GitHub if problems persist.",
         },
       ]);
       setEfficiencyData([]);
@@ -305,7 +310,16 @@ const EfficiencyPage = () => {
             </div>
           </div>
         )}
-        {!loading && <EfficiencyReport data={efficiencyData} />}
+        {!loading && efficiencyData.length === 0 && errors.length === 0 && (
+          <NoDataMessage
+            window={win}
+            onWindowChange={(w) => {
+              searchParams.set("window", w);
+              navigate({ search: `?${searchParams.toString()}` });
+            }}
+          />
+        )}
+        {!loading && efficiencyData.length > 0 && <EfficiencyReport data={efficiencyData} />}
       </Paper>
       <Footer />
     </Page>

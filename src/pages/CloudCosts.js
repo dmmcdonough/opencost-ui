@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router";
 import { checkCustomWindow, toVerboseTimeRange } from "../util";
 import CloudCostEditControls from "../components/cloudCost/controls/cloudCostEditControls";
 import Subtitle from "../components/Subtitle";
+import NoDataMessage from "../components/NoDataMessage";
 import Warnings from "../components/Warnings";
 import CloudCostTopService from "../services/cloudCostTop";
 
@@ -299,7 +300,16 @@ const CloudCosts = () => {
             </div>
           )}
 
-          {!loading && (
+          {!loading && !cloudCostData.tableRows?.length && errors.length === 0 && (
+            <NoDataMessage
+              window={window}
+              onWindowChange={(w) => {
+                searchParams.set("window", w);
+                navigate({ search: `?${searchParams.toString()}` });
+              }}
+            />
+          )}
+          {!loading && cloudCostData.tableRows?.length > 0 && (
             <CloudCost
               cumulativeData={cloudCostData.tableRows}
               currency={currency}

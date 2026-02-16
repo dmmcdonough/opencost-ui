@@ -11,6 +11,7 @@ import AllocationReport from "../components/allocationReport";
 import Controls from "../components/Controls";
 import FilterBreadcrumb from "../components/FilterBreadcrumb";
 import Header from "../components/Header";
+import NoDataMessage from "../components/NoDataMessage";
 import Page from "../components/Page";
 import Footer from "../components/Footer";
 import Subtitle from "../components/Subtitle";
@@ -484,7 +485,16 @@ const ReportsPage = () => {
             </div>
           </div>
         )}
-        {!loading && (
+        {!loading && allocationData.length === 0 && errors.length === 0 && (
+          <NoDataMessage
+            window={win}
+            onWindowChange={(w) => {
+              searchParams.set("window", w);
+              navigate({ search: `?${searchParams.toString()}` });
+            }}
+          />
+        )}
+        {!loading && allocationData.length > 0 && (
           <AllocationReport
             allocationData={allocationData}
             cumulativeData={cumulativeData}
