@@ -101,7 +101,7 @@ const AllocationReport = ({
   return (
     <div id="report">
       <AllocationChart
-        allocationRange={allocationData}
+        allocationRange={allocationData.filter((set) => set.length > 0)}
         currency={currency}
         n={10}
         height={300}
