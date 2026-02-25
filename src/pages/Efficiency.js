@@ -186,7 +186,11 @@ const EfficiencyPage = () => {
       }
       const resp = await EfficiencyService.fetchEfficiency(win, aggregateBy, opts);
       if (resp.data && resp.data.efficiencies) {
-        setEfficiencyData(resp.data.efficiencies);
+        let items = resp.data.efficiencies;
+        if (!showSmall) {
+          items = items.filter((e) => Math.round((e.costSavings || 0) * 100) > 0);
+        }
+        setEfficiencyData(items);
       } else {
         setEfficiencyData([]);
       }
